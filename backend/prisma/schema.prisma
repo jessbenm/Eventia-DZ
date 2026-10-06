@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  DISABLED
+  COMPLETED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
+
+enum TicketStatus {
+  VALID
+  USED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  REGISTRATION
+  LOGIN
+  TICKET_PURCHASE
+  EVENT_CREATED
+  BOOKING_CANCELLED
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String?
+  firstName     String
+  lastName      String
+  phone         String?
+  avatar        String?
+  role          Role           @default(USER)
+  provider      AuthProvider   @default(LOCAL)
+  googleId      String?        @unique
+  refreshTokens RefreshToken[]
+  bookings      Booking[]
+  payments      Payment[]
+  events        Event[]        @relation("OrganizerEvents")
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id             String      @id @default(cuid())
+  title          String
+  description    String      @db.Text
+  date           DateTime
+  time           String
+  endTime        String?
+  duration       String
+  location       String
+  city           String      @default("Oran")
+  capacity       Int
+  remainingSeats Int
+  price          Decimal     @db.Decimal(12, 2)
+  category       String      @default("Événement")
+  mainImage      String
+  gallery        String[]
+  status         EventStatus @default(DRAFT)
+  organizerId    String
+  organizer      User        @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  tags           String[]
+  featured       Boolean     @default(false)
+  rating         Float       @default(4.5)
+  reviewsCount   Int         @default(0)
+  program        Json?
+  collaborators  Json?
+  sponsors       Json?
+  bookings       Booking[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+  eventId    String
+  event      Event         @relation(fields: [eventId], references: [id])
+  quantity   Int
+  totalPrice Decimal       @db.Decimal(12, 2)
+  status     BookingStatus @default(PENDING)
+  tickets    Ticket[]
+  payment    Payment?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  bookingId   String
+  booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  qrCode      String       @unique
+  status      TicketStatus @default(VALID)
+  generatedAt DateTime     @default(now())
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  bookingId       String        @unique
+  booking         Booking       @relation(fields: [bookingId], references: [id])
+  stripePaymentId String?       @unique
+  stripeIntentId  String?       @unique
+  amount          Decimal       @db.Decimal(12, 2)
+  currency        String        @default("dzd")
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  read      Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+}

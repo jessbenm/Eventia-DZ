@@ -1,0 +1,28 @@
+# Node / frontend
+node_modules/
+.vite/
+dist/
+build/
+coverage/
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Backend / Prisma
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Optional generated files
+*.local
